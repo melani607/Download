@@ -1,17 +1,22 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AIO Media Downloader</title>
+    <title>onedl - Media Downloader & Player</title>
     
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="description" content="Aplikasi pengunduh dan pemutar media responsif">
+    <link rel="apple-touch-icon" href="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=192&auto=format&fit=crop">
+
     <!-- Tailwind CSS (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Phosphor Icons (Untuk Icon Modern) -->
+    <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
-    <!-- Konfigurasi Tema Tailwind (Opsional) -->
     <script>
         tailwind.config = {
             theme: {
@@ -20,8 +25,8 @@
                         sans: ['Inter', 'system-ui', 'sans-serif'],
                     },
                     colors: {
-                        primary: '#4f46e5', // Indigo 600
-                        primaryHover: '#4338ca', // Indigo 700
+                        primary: '#4f46e5',
+                        primaryHover: '#4338ca',
                     }
                 }
             }
@@ -30,7 +35,6 @@
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -44,12 +48,18 @@
         <div class="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
             <div class="flex items-center gap-2">
                 <div class="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
-                    <i class="ph ph-download-simple text-2xl"></i>
+                    <i class="ph ph-play-circle text-2xl"></i>
                 </div>
                 <h1 class="font-bold text-xl tracking-tight text-gray-900">
-                    AIO<span class="text-primary">Downloader</span>
+                    one<span class="text-primary">dl</span>
                 </h1>
             </div>
+            
+            <!-- Tombol Instal PWA (Disembunyikan secara default hingga event 'beforeinstallprompt' memicu) -->
+            <button id="installBtn" class="hidden items-center gap-2 bg-indigo-50 text-primary hover:bg-indigo-100 font-semibold px-3.5 py-2 rounded-xl text-xs sm:text-sm transition-all border border-indigo-100">
+                <i class="ph ph-download text-base"></i>
+                <span>Instal App</span>
+            </button>
         </div>
     </header>
 
@@ -59,10 +69,10 @@
         <!-- Hero Section -->
         <div class="w-full max-w-3xl text-center mb-10">
             <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-4 tracking-tight">
-                Unduh Video & Audio
+                Unduh & Putar Media
             </h2>
             <p class="text-gray-500 text-sm sm:text-base max-w-xl mx-auto">
-                Masukkan tautan/URL di bawah ini untuk melihat pratinjau dan mengunduh konten.
+                Tempel <strong>tautan</strong> untuk mengunduh, atau ketik <strong>kata kunci</strong> (misal: "Ibu") untuk mencari dan memutar lagu/video.
             </p>
         </div>
 
@@ -71,12 +81,12 @@
             <form id="downloadForm" class="flex flex-col sm:flex-row gap-3">
                 <div class="relative flex-grow">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <i class="ph ph-link text-gray-400 text-xl"></i>
+                        <i class="ph ph-magnifying-glass text-gray-400 text-xl"></i>
                     </div>
                     <input 
-                        type="url" 
+                        type="text" 
                         id="urlInput" 
-                        placeholder="Tempel tautan di sini..." 
+                        placeholder="Tempel tautan link atau ketik judul..." 
                         required
                         class="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-gray-700"
                     >
@@ -86,7 +96,7 @@
                     id="submitBtn"
                     class="bg-primary hover:bg-primaryHover text-white font-semibold py-3.5 px-8 rounded-xl transition-all shadow-lg shadow-indigo-200/50 flex items-center justify-center gap-2 shrink-0 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                    <span id="btnText">Proses Link</span>
+                    <span id="btnText">Proses</span>
                     <i id="btnIcon" class="ph ph-arrow-right text-xl"></i>
                     <i id="loadingSpinner" class="ph ph-spinner animate-spin text-xl hidden"></i>
                 </button>
@@ -98,7 +108,7 @@
             <i class="ph ph-warning-circle text-xl mt-0.5"></i>
             <div>
                 <h4 class="font-semibold text-sm">Terjadi Kesalahan</h4>
-                <p id="errorMessage" class="text-sm mt-1 opacity-90">Tidak dapat memproses tautan yang diberikan.</p>
+                <p id="errorMessage" class="text-sm mt-1 opacity-90">Tidak dapat memproses kueri yang diberikan.</p>
             </div>
         </div>
 
@@ -145,13 +155,113 @@
             </div>
         </div>
 
+        <!-- App Info Box -->
+        <div class="w-full max-w-2xl mt-12 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+            <h4 class="text-base font-bold text-gray-900 flex items-center gap-2 mb-4">
+                <i class="ph ph-info text-primary text-xl"></i> Info Aplikasi
+            </h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-600">
+                <div class="flex flex-col">
+                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Nama Aplikasi</span>
+                    <span class="font-medium text-gray-900">onedl</span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Versi</span>
+                    <span class="font-medium text-gray-900">1.0 (PWA)</span>
+                </div>
+                <div class="flex flex-col sm:col-span-2">
+                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Library</span>
+                    <a href="https://andre-api-blue.vercel.app/" target="_blank" class="text-primary hover:underline break-all">https://andre-api-blue.vercel.app/</a>
+                </div>
+                <div class="flex flex-col sm:col-span-2">
+                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">API Integrasi</span>
+                    <div class="flex flex-col gap-1">
+                        <a href="https://andre-api-blue.vercel.app/" target="_blank" class="text-primary hover:underline break-all">- https://andre-api-blue.vercel.app/ (AIO Downloader)</a>
+                        <a href="https://api-faa.my.id/faa/ytplay?query=" target="_blank" class="text-primary hover:underline break-all">- https://andre-api-blue.vercel.app/ (YouTube Play)</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <footer class="mt-auto py-6 text-center text-gray-400 text-sm">
-        <p>&copy; 2026 AIO Downloader.</p>
+        <p>&copy; 2026 onedl. Putri Dwi Syafira.</p>
     </footer>
 
+    <!-- Logika Utama & PWA Registration -->
     <script>
+        // 1. Dinamis Manifest Generation via Blob untuk menjaga Single File Mandate
+        const manifestData = {
+            "name": "onedl Downloader",
+            "short_name": "onedl",
+            "start_url": "./",
+            "display": "standalone",
+            "background_color": "#f9fafb",
+            "theme_color": "#4f46e5",
+            "icons": [
+                {
+                    "src": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=192&auto=format&fit=crop",
+                    "sizes": "192x192",
+                    "type": "image/jpeg"
+                }
+            ]
+        };
+        const manifestBlob = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
+        const manifestURL = URL.createObjectURL(manifestBlob);
+        const manifestTag = document.createElement('link');
+        manifestTag.rel = 'manifest';
+        manifestTag.href = manifestURL;
+        document.head.appendChild(manifestTag);
+
+        // 2. Service Worker Registration via Blob
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                self.addEventListener('install', (e) => {
+                    self.skipWaiting();
+                });
+                self.addEventListener('activate', (e) => {
+                    e.waitUntil(clients.claim());
+                });
+                self.addEventListener('fetch', (e) => {
+                    // Bypass service worker untuk panggilan API luar agar tidak memblokir fetch eksternal
+                    if (e.request.url.includes('vercel.app') || e.request.url.includes('api-faa.my.id')) {
+                        return;
+                    }
+                    e.respondWith(
+                        caches.match(e.request).then((response) => response || fetch(e.request))
+                    );
+                });
+            `;
+            const swBlob = new Blob([swCode], {type: 'text/javascript'});
+            const swURL = URL.createObjectURL(swBlob);
+            navigator.serviceWorker.register(swURL)
+                .then(() => console.log('PWA Service Worker Aktif!'))
+                .catch(err => console.log('PWA Gagal:', err));
+        }
+
+        // 3. Logika Prompt Instalasi PWA
+        let deferredPrompt;
+        const installBtn = document.getElementById('installBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.classList.remove('hidden');
+            installBtn.classList.add('flex');
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                installBtn.classList.add('hidden');
+            }
+            deferredPrompt = null;
+        });
+
+        // 4. Logika Aplikasi Downloader & Player
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('downloadForm');
             const urlInput = document.getElementById('urlInput');
@@ -172,34 +282,38 @@
             const audioGroup = document.getElementById('audioGroup');
             const audioList = document.getElementById('audioList');
 
-            const API_BASE_URL = 'https://andre-api-blue.vercel.app/api?endpoint=aio&url=';
+            const API_AIO = 'https://andre-api-blue.vercel.app/api?endpoint=aio&url=';
+            const API_YTPLAY = 'https://api-faa.my.id/faa/ytplay?query=';
 
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                
-                const url = urlInput.value.trim();
-                if (!url) return;
+                const inputVal = urlInput.value.trim();
+                if (!inputVal) return;
 
                 setLoadingState(true);
                 hideError();
                 hideResult();
 
                 try {
-                    const response = await fetch(`${API_BASE_URL}${encodeURIComponent(url)}`);
+                    const isUrl = /^(https?:\/\/)/i.test(inputVal);
+                    const endpoint = isUrl ? API_AIO : API_YTPLAY;
+                    const fetchUrl = `${endpoint}${encodeURIComponent(inputVal)}`;
+
+                    const response = await fetch(fetchUrl);
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     
                     const data = await response.json();
                     const parsedData = parseApiResponse(data);
                     
                     if (!parsedData || parsedData.medias.length === 0) {
-                        throw new Error('Tidak ada file media yang dapat ditemukan dari tautan ini.');
+                        throw new Error('Tidak ada file media yang dapat ditemukan dari kueri ini.');
                     }
 
                     renderResult(parsedData);
 
                 } catch (error) {
                     console.error('Fetch error:', error);
-                    showError(error.message || 'Gagal memproses tautan. Pastikan API merespons atau tautan sudah benar.');
+                    showError(error.message || 'Gagal memproses kueri. Pastikan API merespons atau input sudah benar.');
                 } finally {
                     setLoadingState(false);
                 }
@@ -213,7 +327,7 @@
                     loadingSpinner.classList.remove('hidden');
                 } else {
                     submitBtn.disabled = false;
-                    btnText.textContent = 'Proses Link';
+                    btnText.textContent = 'Proses';
                     btnIcon.classList.remove('hidden');
                     loadingSpinner.classList.add('hidden');
                 }
@@ -245,22 +359,26 @@
                     medias: []
                 };
 
-                let items = dataCore.medias || dataCore.downloads || dataCore.urls || dataCore.video || [];
+                let items = dataCore.medias || dataCore.downloads || dataCore.urls || [];
 
-                if (items.length === 0 && dataCore.url) {
-                    items = [{ url: dataCore.url, quality: "Default", extension: "mp4" }];
-                } else if (!Array.isArray(items) && typeof items === 'object') {
-                    if(items.mp4) result.medias.push({url: items.mp4, extension: 'mp4', quality: 'Video'});
-                    if(items.mp3) result.medias.push({url: items.mp3, extension: 'mp3', quality: 'Audio'});
-                    if(items.no_watermark) result.medias.push({url: items.no_watermark, extension: 'mp4', quality: 'No Watermark'});
-                }
-
-                if (Array.isArray(items)) {
+                if (Array.isArray(items) && items.length > 0) {
                     result.medias = items.map(item => ({
                         url: item.url || item.link || item.download_url,
                         quality: item.quality || item.render || item.type || item.resolution || "Normal",
                         extension: item.extension || item.ext || item.format || "unknown"
                     })).filter(m => m.url);
+                } else {
+                    let objData = dataCore.download || dataCore;
+                    let videoUrl = objData.video || objData.mp4;
+                    if (videoUrl && typeof videoUrl === 'string') {
+                        result.medias.push({ url: videoUrl, extension: 'mp4', quality: 'Video' });
+                    }
+                    let audioUrl = objData.audio || objData.mp3;
+                    if (audioUrl && typeof audioUrl === 'string') {
+                        result.medias.push({ url: audioUrl, extension: 'mp3', quality: 'Audio' });
+                    }
+                    if (objData.no_watermark) result.medias.push({ url: objData.no_watermark, extension: 'mp4', quality: 'No Watermark' });
+                    if (result.medias.length === 0 && dataCore.url) result.medias.push({ url: dataCore.url, quality: "Default", extension: "mp4" });
                 }
 
                 return result;
@@ -273,10 +391,10 @@
                 const videoMedia = data.medias.find(m => m.extension.toLowerCase() !== 'mp3' && !m.quality.toLowerCase().includes('audio'));
                 const audioMedia = data.medias.find(m => m.extension.toLowerCase() === 'mp3' || m.quality.toLowerCase().includes('audio'));
 
-                if (videoMedia) {
-                    previewMedia = { type: 'video', url: videoMedia.url, thumbnail: data.thumbnail };
-                } else if (audioMedia) {
+                if (audioMedia) {
                     previewMedia = { type: 'audio', url: audioMedia.url, thumbnail: data.thumbnail };
+                } else if (videoMedia) {
+                    previewMedia = { type: 'video', url: videoMedia.url, thumbnail: data.thumbnail };
                 } else {
                     previewMedia = { type: 'image', url: data.thumbnail }; 
                 }
@@ -297,11 +415,9 @@
                     `;
                 }
 
-                // Memisahkan Array Media menjadi Video dan Audio
                 const videos = data.medias.filter(m => m.extension.toLowerCase() !== 'mp3' && !m.quality.toLowerCase().includes('audio') && !m.extension.toLowerCase().includes('m4a'));
                 const audios = data.medias.filter(m => m.extension.toLowerCase() === 'mp3' || m.extension.toLowerCase() === 'm4a' || m.quality.toLowerCase().includes('audio'));
 
-                // Render Tombol Video
                 if (videos.length > 0) {
                     videoGroup.classList.remove('hidden');
                     videos.forEach(media => {
@@ -309,7 +425,6 @@
                     });
                 }
 
-                // Render Tombol Audio
                 if (audios.length > 0) {
                     audioGroup.classList.remove('hidden');
                     audios.forEach(media => {
@@ -321,7 +436,6 @@
                 setTimeout(() => resultBox.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
             }
 
-            // Template Tombol Dinamis
             function createButton(media, type) {
                 const isAudio = type === 'audio';
                 const iconClass = isAudio ? 'ph-music-notes' : 'ph-monitor-play';
@@ -349,3 +463,5 @@
     </script>
 </body>
 </html>
+
+
